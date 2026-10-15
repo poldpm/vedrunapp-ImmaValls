@@ -1,6 +1,6 @@
 {
   "mestra": "Imma Valls",
-  "mareVersio": "v280",
+  "mareVersio": "v281",
   "propis": [
     "manifest.webmanifest",
     "manifest.json"
@@ -45,6 +45,7 @@
     "js/grupview.js",
     "js/gwrite.js",
     "js/horari.js",
+    "js/horariclaustre-dades.js",
     "js/horariclaustre.js",
     "js/incidencies.js",
     "js/login.js",
