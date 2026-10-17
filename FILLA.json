@@ -1,6 +1,6 @@
 {
   "mestra": "Imma Valls",
-  "mareVersio": "v293",
+  "mareVersio": "v294",
   "propis": [
     "manifest.webmanifest",
     "manifest.json"
@@ -37,6 +37,7 @@
     "img/logo-vertical.png",
     "index.html",
     "js/app.js",
+    "js/aules.js",
     "js/config.local.js",
     "js/coordinacio.js",
     "js/docents.js",
