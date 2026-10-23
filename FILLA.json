@@ -2,6 +2,7 @@
   "mestra": "Imma Valls",
   "mareVersio": "v316",
   "propis": [
+    "manual.html",
     "manifest.webmanifest",
     "manifest.json"
   ],
