@@ -245,6 +245,11 @@ function showPage(pageId, _fromPop) {
       !(typeof RubAvalUI !== 'undefined' && RubAvalUI.hiEs && RubAvalUI.hiEs())) {
     pageId = 'home';
   }
+  /* Temporitzador: una altra eina que només té qui l'ha demanada. */
+  if (pageId === 'temporitzador' &&
+      !(typeof Temporitzador !== 'undefined' && Temporitzador.hiEs && Temporitzador.hiEs())) {
+    pageId = 'home';
+  }
   /* Aules lliures: una altra eina que només té qui l'ha demanada. */
   if (pageId === 'aules' &&
       !(typeof Aules !== 'undefined' && Aules.hiEs && Aules.hiEs())) {
@@ -298,6 +303,7 @@ function showPage(pageId, _fromPop) {
   if (pageId === 'rubaval') RubAvalUI.obrePagina();
   if (pageId === 'eines')        renderEines();
   if (pageId === 'aules')        { if (typeof Aules !== 'undefined') Aules.obrePagina(); }
+  if (pageId === 'temporitzador') { if (typeof Temporitzador !== 'undefined') Temporitzador.obre(); }
   if (pageId === 'grups')        initGrups();
   if (pageId === 'seients')      initSeients();
   if (pageId === 'postits')      initPostits();
@@ -472,6 +478,7 @@ const EINES_DESC = {
   postits:    'Apunta idees ràpid. Es guarden soles.',
   rubaval:    'Els teus criteris, amb el pes que vulguis. La nota va al registre.',
   aules:      'Quines aules auxiliars s\u00f3n buides ara, i fins a quina hora.',
+  temporitzador: 'Un compte enrere gran, per projectar: «cinc minuts i recollim».',
 };
 
 function renderEines() {
@@ -3142,9 +3149,20 @@ async function loadFitxaNotes(studentId, container) {
   let _showList = (typeof _perfil !== 'undefined' && _perfil.classes && _perfil.classes[tutorGrup])
     ? _perfil.classes[tutorGrup].map(nom => ({ key: _kn(nom), nom }))
     : [];
+  /* ⚠ «Musica__3ra» no és un nom d'assignatura.
+     El nom surt de com es diu la pestanya de notes, i la clau de
+     l'assignatura hi porta el grup enganxat. A un tutor no se li nota —el
+     servidor li treu el sufix del grup—, però a direcció, que no té tutoria,
+     el resum arriba amb la clau sencera i a la fitxa hi sortia «Musica__3ra»
+     com a nom d'assignatura. */
+  const _nomNet = n => {
+    const base = String(n || '').split('__')[0].trim();
+    const k = _kn(base);
+    return (typeof MATERIES !== 'undefined' && MATERIES[k]) ? MATERIES[k] : (base || String(n || ''));
+  };
   if (Array.isArray(mats)) {
     const _have = new Set(_showList.map(x => x.key));
-    mats.forEach(m => { if (!_have.has(m.key)) { _showList.push({ key: m.key, nom: m.nom }); _have.add(m.key); } });
+    mats.forEach(m => { if (!_have.has(m.key)) { _showList.push({ key: m.key, nom: _nomNet(m.nom) }); _have.add(m.key); } });
   }
   if (!_showList.length) {
     _showList = (Array.isArray(mats) && mats.length) ? mats.slice()
@@ -3222,14 +3240,29 @@ async function loadFitxaNotes(studentId, container) {
     </table>
     <div id="fitxaNotesAltres" data-alumne="${studentId}"></div>`;
 
-  /* Privilegi del tutor: les assignatures que li fan ALTRES mestres.
-     Cada mestra decideix si comparteix les seves notes; si no, aquí hi
-     surt "Notes no compartides". Va a part i en segon pla, perquè les
-     seves notes no s'endarrereixin esperant el full compartit. */
-  if (tutorGrup && typeof carregaNotesCompartides === 'function') {
+  /* Les assignatures que li fan ALTRES mestres. Cada mestra decideix si
+     comparteix les seves notes; si no, aquí hi surt "Notes no compartides".
+     Va a part i en segon pla, perquè les seves notes no s'endarrereixin
+     esperant el full compartit.
+
+     ⚠ QUI HO POT VEURE: el tutor del grup i la DIRECCIÓ.
+
+     Era només del tutor, i la directora, obrint la fitxa d'un nen de 5è A,
+     només hi veia les assignatures que ella fa (en Pol, 23/10/2026: «fes que
+     direcció també ho vegi»). Una especialista NO: les fitxes, per a ella,
+     són de només lectura i d'un grup que no és seu.
+
+     El grup no pot ser el de tutoria, perquè a direcció no n'hi ha cap: és el
+     grup del NEN que té obert. Ho resol `_obsGrupDeLAlumne`, que ja és qui ho
+     decideix per a les observacions —un sol lloc, i no dos que puguin acabar
+     dient grups diferents. */
+  const _dirHoVeu = (typeof esDireccio === 'function') && esDireccio();
+  const _grupFitxa = tutorGrup ||
+    (_dirHoVeu && typeof _obsGrupDeLAlumne === 'function' ? _obsGrupDeLAlumne(studentId, null) : null);
+  if (_grupFitxa && typeof carregaNotesCompartides === 'function') {
     const _rowId = (personal[studentId] && personal[studentId].rowId) || null;
     if (_rowId) {
-      carregaNotesCompartides(tutorGrup).then(assigs => {
+      carregaNotesCompartides(_grupFitxa).then(assigs => {
         const cont = document.getElementById('fitxaNotesAltres');
         if (!cont) return;   // ha canviat de pantalla mentrestant
         // ⚠ CARRERA: passant fitxes de pressa, la resposta d'un alumne pot
@@ -5312,6 +5345,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // carrega l'últim de tots i per tant ja hi és quan s'arriba aquí).
   try { if (typeof RubAvalUI !== 'undefined') RubAvalUI.aplicaInterficie(); } catch (e) {}
   try { if (typeof Aules !== 'undefined') Aules.aplicaInterficie(); } catch (e) {}
+  try { if (typeof Temporitzador !== 'undefined') Temporitzador.aplicaInterficie(); } catch (e) {}
   updateHomeCounters(); // inicialitza data sidebar
   // Mostra el nom del perfil al menú des del cache local (immediat)
   try {
@@ -8055,6 +8089,31 @@ async function toggleGTask(id) {
 let _grupsNum        = 3;   // alumnes per grup
 let _grupsCondicions = [];  // [ [nomA, nomB] ]  → no poden anar junts
 
+/* ⚠ ELS QUE AVUI NO HI SÓN. Són ÍNDEXS d'`_grupsAlumnes`, com les
+   condicions, i no es filtra mai la llista.
+
+   Sembla més senzill passar al generador una llista ja filtrada, i és
+   justament el que no es pot fer: les condicions (`_grupsCondicions`), el
+   que torna el generador i els noms que es pinten (`_mostrarGrups`) són
+   TOTS índexs dins d'`_grupsAlumnes`. Filtrant la llista, tots es
+   desplacen: la condició «l'Aina amb en Bruno no» passaria a parlar d'uns
+   altres dos nens i el resultat ensenyaria noms canviats, sense que res
+   petés. Per això el que es fa és SALTAR aquests índexs allà on es
+   reparteix, i tota la resta es queda igual.
+
+   No es desa enlloc a posta: és qui falta avui, no una configuració. Es
+   buida en canviar d'assignatura o de grup, com les condicions. */
+let _grupsFora = new Set();
+
+/* Els índexs dels que SÍ que entren al repartiment. */
+function _grupsIndexosPresents() {
+  const al = (_grupsAlumnes && _grupsAlumnes.length) ? _grupsAlumnes : students;
+  const fora = [];
+  al.forEach((s, i) => { if (!_grupsFora.has(i)) fora.push(i); });
+  return fora;
+}
+function _grupsQuantsPresents() { return _grupsIndexosPresents().length; }
+
 const GRUPS_COLORS = [
   { bg:'#DBEAFE', border:'#93C5FD', text:'#1E40AF' },
   { bg:'#D1FAE5', border:'#6EE7B7', text:'#065F46' },
@@ -8072,9 +8131,11 @@ function initGrups() {
   if (typeof _prefetchNotesResum === "function") { try { _prefetchNotesResum(); } catch (e) {} }
   _grupsNum = 3;
   _grupsCondicions = [];
+  _grupsFora.clear();
   _grupsPoblarSelector();
   document.getElementById('grupsNumVal').textContent = _grupsNum;
   _renderGrupsCondicions();
+  _renderGrupsFora();
   _updateGrupsHint();
   document.getElementById('grupsResultat').innerHTML = `<div class="tasques-empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="40" height="40"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
@@ -8151,7 +8212,9 @@ async function grupsCanviaAssig() {
     _grupsAlumnes = alumnes.length ? alumnes : students.slice();
     if (hint) hint.textContent = `${_grupsAlumnes.length} alumnes`;
     _grupsCondicions = [];
+    _grupsFora.clear();          // la llista és nova: tothom hi torna a ser
     _renderGrupsCondicions();
+    _renderGrupsFora();
     _updateGrupsHint();
     return;
   }
@@ -8165,7 +8228,9 @@ async function grupsCanviaAssig() {
     _grupsAlumnes = students.slice();
     if (hint) hint.textContent = `${_grupsAlumnes.length} alumnes`;
     _grupsCondicions = [];
+    _grupsFora.clear();          // la llista és nova: tothom hi torna a ser
     _renderGrupsCondicions();
+    _renderGrupsFora();
     _updateGrupsHint();
     return;
   }
@@ -8180,19 +8245,23 @@ async function grupsCanviaAssig() {
   }
   if (hint) hint.textContent = `${_grupsAlumnes.length} alumnes${grup ? ' a ' + grup : ''}`;
   _grupsCondicions = []; // reinicia condicions en canviar d'assignatura
+  _grupsFora.clear();          // i tothom hi torna a ser
   _renderGrupsCondicions();
+  _renderGrupsFora();
   _updateGrupsHint();
 }
 
 function grupsChangeNum(delta) {
-  const total = ((_grupsAlumnes && _grupsAlumnes.length) ? _grupsAlumnes.length : students.length) || 20;
+  const total = _grupsQuantsPresents() || 20;
   _grupsNum = Math.max(2, Math.min(total, _grupsNum + delta));
   document.getElementById('grupsNumVal').textContent = _grupsNum;
   _updateGrupsHint();
 }
 
 function _updateGrupsHint() {
-  const total = (_grupsAlumnes && _grupsAlumnes.length) ? _grupsAlumnes.length : students.length;
+  /* Els que hi són avui, no tota la classe: si no, la pista prometria grups
+     que després no sortirien (veure `_grupsFora`). */
+  const total = _grupsQuantsPresents();
   if (!total) { document.getElementById('grupsHint').textContent = 'Carrega els alumnes primer'; return; }
   /* ⚠ «0 DE 12 I 1 DE 8».
 
@@ -8232,6 +8301,56 @@ function afegirCondicio() {
   if (!_al.length) { showToast('Encara no hi ha alumnes: tria l’assignatura a dalt.', 'error'); return; }
   _grupsCondicions.push([null, null]);
   _renderGrupsCondicions();
+}
+
+/* QUI HI ÉS AVUI.
+
+   Un nom apagat no entra al repartiment i no compta per als números. En Pol,
+   29/10/2026: «he de poder triar si algun nen no hi és perquè no el compti».
+
+   Es clica el nom i prou: res de caselles ni de desplegables, que amb
+   vint-i-cinc nens serien vint-i-cinc clics per a res. I el comptador diu
+   sempre quants en queden, perquè es vegi d'un cop d'ull si te'n deixes cap. */
+function _renderGrupsFora() {
+  const wrap = document.getElementById('grupsFora');
+  if (!wrap) return;
+  const al = (_grupsAlumnes && _grupsAlumnes.length) ? _grupsAlumnes : students;
+  if (!al.length) { wrap.innerHTML = ''; return; }
+
+  /* Dos noms iguals es numeren, igual que a les condicions: si no, no se sap
+     quina de les dues Júlies s'està traient. */
+  const rep = {}; al.forEach(s => { const k = String(s.nom || '').trim().toLowerCase(); rep[k] = (rep[k] || 0) + 1; });
+  const num = {};
+  const noms = al.map(s => {
+    const k = String(s.nom || '').trim().toLowerCase();
+    if (k && rep[k] > 1) { num[k] = (num[k] || 0) + 1; return s.nom + ' (' + num[k] + ')'; }
+    return s.nom || '';
+  });
+
+  wrap.innerHTML = al.map((s, i) => {
+    const fora = _grupsFora.has(i);
+    return `<button type="button" class="grups-qui-btn${fora ? ' fora' : ''}" ` +
+      `onclick="grupsToggleFora(${i})" aria-pressed="${fora ? 'false' : 'true'}" ` +
+      `title="${fora ? 'Avui no hi és — clica per tornar-l\'hi a posar' : 'Hi és — clica per treure\'l del repartiment'}">` +
+      escapeHtml(noms[i]) + '</button>';
+  }).join('');
+
+  const diu = document.getElementById('grupsForaHint');
+  if (diu) {
+    const n = _grupsQuantsPresents();
+    diu.textContent = _grupsFora.size
+      ? `${n} de ${al.length} — ${_grupsFora.size} fora del repartiment`
+      : `Hi són tots (${al.length})`;
+  }
+}
+
+function grupsToggleFora(i) {
+  if (_grupsFora.has(i)) _grupsFora.delete(i); else _grupsFora.add(i);
+  _renderGrupsFora();
+  /* La mida del grup pot haver quedat més gran que els que queden: la pista
+     ho acota (veure `_updateGrupsHint`), i així no promet grups impossibles. */
+  _updateGrupsHint();
+  document.getElementById('grupsNumVal').textContent = _grupsNum;
 }
 
 function _renderGrupsCondicions() {
@@ -8296,6 +8415,12 @@ function eliminarCondicio(ci) {
 function generarGrups() {
   const alumnes = (_grupsAlumnes && _grupsAlumnes.length) ? _grupsAlumnes : students;
   if (!alumnes.length) { showToast('No hi ha alumnes carregats', 'error'); return; }
+  /* Els que avui hi són. Sempre són ÍNDEXS d'`alumnes`: veure `_grupsFora`. */
+  const presents = _grupsIndexosPresents();
+  if (!presents.length) {
+    showToast('Els has tret tots de la llista: no queda ningú per repartir.', 'error');
+    return;
+  }
   /* ⚠ Amb «Alumnes per grup» a 0 o negatiu, `_formarGrups` no avancava mai i
      la pagina es quedava penjada entre 15 i 22 segons abans de petar. Des dels
      botons no s hi arriba, pero des de qualsevol altra crida si (auditoria
@@ -8305,7 +8430,7 @@ function generarGrups() {
     showToast('Els alumnes per grup han de ser com a mínim 1.', 'error');
     return;
   }
-  _grupsNum = Math.min(_perGrup, alumnes.length);
+  _grupsNum = Math.min(_perGrup, presents.length);
 
   let grups = null;
 
@@ -8321,12 +8446,12 @@ function generarGrups() {
        Amb `true` continua equilibrant per nivell i PI/AM exactament igual:
        l'únic que canvia és per quin nen comença dins de cada nivell, que és
        justament el que ha de canviar quan es demana una repartició nova. */
-    grups = _generarHeterogenis(alumnes, true);
+    grups = _generarHeterogenis(alumnes, true, presents);
     // Intenta respectar les condicions reordenant si cal
     if (!_compleixCondicions(grups)) {
       // Un parell d'intents més barrejant l'ordre de repartiment
       for (let intent = 0; intent < 200; intent++) {
-        const candidat = _generarHeterogenis(alumnes, true);
+        const candidat = _generarHeterogenis(alumnes, true, presents);
         if (_compleixCondicions(candidat)) { grups = candidat; break; }
       }
       if (!_compleixCondicions(grups)) showToast('Grups equilibrats, però no s\'han pogut complir totes les condicions', 'error');
@@ -8335,12 +8460,12 @@ function generarGrups() {
     // Homogeni: aleatori
     const MAX_INTENTS = 500;
     for (let intent = 0; intent < MAX_INTENTS; intent++) {
-      const barrejats = _barrejar([...alumnes.map((s,i) => i)]);
+      const barrejats = _barrejar(presents.slice());
       const candidat  = _formarGrups(barrejats, _grupsNum);
       if (_compleixCondicions(candidat)) { grups = candidat; break; }
     }
     if (!grups) {
-      grups = _formarGrups(_barrejar([...alumnes.map((s,i) => i)]), _grupsNum);
+      grups = _formarGrups(_barrejar(presents.slice()), _grupsNum);
       showToast('No s\'han pogut complir totes les condicions', 'error');
     }
   }
@@ -8350,13 +8475,20 @@ function generarGrups() {
 
 // Genera grups HETEROGENIS: cada grup té una barreja equilibrada de nivells.
 // Reparteix PI (1/grup), AM (1/grup) i la resta ordenats per nota en serpentina.
-function _generarHeterogenis(alumnes, aleatoritzar) {
-  const nGrups = Math.ceil(alumnes.length / _grupsNum);
+/* `presents` són els índexs d'`alumnes` que entren al repartiment. La llista
+   NO es filtra (veure `_grupsFora`): el que torna aquesta funció són índexs
+   d'`alumnes`, i són els mateixos que fan servir les condicions i els noms
+   que es pinten. Sense `presents` es reparteixen tots, com sempre. */
+function _generarHeterogenis(alumnes, aleatoritzar, presents) {
+  const hiEs = presents ? new Set(presents) : null;
+  const quants = hiEs ? hiEs.size : alumnes.length;
+  const nGrups = Math.ceil(quants / _grupsNum);
   const grups = Array.from({ length: nGrups }, () => []);
 
   // Classifica els alumnes per índex
   const ambPI = [], ambAM = [], resta = [];
   alumnes.forEach((s, i) => {
+    if (hiEs && !hiEs.has(i)) return;        // avui no hi és
     /* ⚠ Si l alumne porta el seu PI/AM (ve del full «Grups» d un altre grup),
        mana el SEU.  és de la classe que hi ha carregada, i
        repartint un altre grup hi posava el PI i l AM dels teus alumnes
@@ -9853,6 +9985,15 @@ async function initNotifications() {
     _swReg = await navigator.serviceWorker.ready;
   } catch(e) { return; }
 
+  /* ⚠ AIXÒ HA DE PASSAR ENCARA QUE NO HI HAGI PERMÍS NI RES A PROGRAMAR.
+
+     Amb l'avís del matí aturat, el que queda per fer és DESREGISTRAR el
+     que ja estigui registrat al mòbil de cada mestra. Si es deixés dins
+     del camí de sota —que surt abans si no hi ha permís—, els aparells
+     que el tenien posat el conservarien per sempre. Veure
+     `_registraSyncDiari()`. */
+  try { await _registraSyncDiari(); } catch (e) {}
+
   const perm = Notification.permission;
   if (perm === 'denied') return;
   if (perm === 'default') {
@@ -9992,8 +10133,19 @@ function _collectTodayItems() {
   return { avuiStr, items };
 }
 
-/* Programa la notificació per les 7:00 del matí (del dia actual o del dia vinent) */
+/* Programa la notificació per les 7:00 del matí (del dia actual o del dia vinent)
+
+   ⚠ ATURAT A POSTA (27/10/2026). El motiu sencer és al `checkAndNotify()`
+   del sw.js: l'avís arribava quan volia el Chrome —a en Pol li va sortir
+   un «Bon dia» a les quatre de la tarda— i al navegador no hi ha manera
+   de demanar una hora. Es reprèn quan l'enviï un servidor.
+
+   Es queda tot el càlcul fet i provat: per tornar-ho a engegar, treure
+   aquest `return` i el de `_registraSyncDiari()`. */
 function _scheduleDaily() {
+  return;
+
+  /* eslint-disable no-unreachable */
   if (!_swReg || Notification.permission !== 'granted') return;
 
   const { avuiStr, items } = _collectTodayItems();
@@ -10012,7 +10164,7 @@ function _scheduleDaily() {
   const n = items.length;
   const payload = {
     fireAt: fire7.getTime(),
-    title:  n > 0 ? `Bon dia! Tens ${n} cosa${n > 1 ? 's' : ''} avui` : 'Bon dia!',
+    title:  n > 0 ? `Bon dia! Tens ${n} ${n > 1 ? 'coses' : 'cosa'} avui` : 'Bon dia!',
     body:   items.slice(0, 4).map(i => '• ' + i).join('\n') + (n > 4 ? `\n… i ${n - 4} més` : ''),
     items,
   };
@@ -10032,6 +10184,20 @@ function _scheduleDaily() {
    punt. I només si l app està instal·lada. És el que hi ha; el que no es
    pot fer és prometre una hora exacta. */
 async function _registraSyncDiari() {
+  /* ⚠ ATURAT: mentre l'avís del matí estigui parat, no es registra res i,
+     a més, es treu el que ja hi hagi. Sense això, els mòbils de les
+     mestres que ja el tenien registrat seguirien despertant l'app cada
+     dia per no res —i, amb una versió vella del service worker encara a
+     sobre, seguirien rebent el «Bon dia» a deshora. */
+  try {
+    if (_swReg && _swReg.periodicSync) {
+      const tags = await _swReg.periodicSync.getTags();
+      if (tags.indexOf('daily-notif') !== -1) await _swReg.periodicSync.unregister('daily-notif');
+    }
+  } catch (e) {}
+  return false;
+
+  /* eslint-disable no-unreachable */
   try {
     if (!_swReg || !_swReg.periodicSync) return false;
     if (navigator.permissions && navigator.permissions.query) {
@@ -10054,7 +10220,7 @@ function testNotification() {
   _swReg.active?.postMessage({
     type: 'TEST_NOTIF',
     payload: {
-      title: n > 0 ? `Bon dia! Tens ${n} cosa${n > 1 ? 's' : ''} avui` : 'Bon dia! No tens res pendent avui',
+      title: n > 0 ? `Bon dia! Tens ${n} ${n > 1 ? 'coses' : 'cosa'} avui` : 'Bon dia! No tens res pendent avui',
       body:  items.slice(0, 4).map(i => '• ' + i).join('\n') || 'Dia lliure 🎉',
       items,
     },

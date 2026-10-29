@@ -1,9 +1,9 @@
 {
-  "versio": "v316",
-  "data": "2026-10-23",
+  "versio": "v322",
+  "data": "2026-10-29",
   "titol": "Novetats d aquesta versió",
   "canvis": [
-    "Al planning, cada franja pot tenir més d'un enllaç. Cadascun amb el seu nom —«Programació», «Fitxa de la sessió», «Vídeo»— i tots surten a la casella, un al costat de l'altre.",
-    "Els enllaços que ja tenies hi continuen sent, igual que abans: no has de tornar a posar-ne cap."
+    "Direcció: a Distribució de l'aula ja pots triar el grup des de la mateixa pàgina, amb un desplegable a dalt, d'entre els grups on fas classe. Abans t'enviava a la pàgina d'Alumnes a triar-lo i no hi havia manera de fer-ho des d'aquí.",
+    "Cada grup segueix tenint el seu plànol, i en canviar de grup surt el que toca. Hi seu la classe sencera, encara que tu només en tinguis mitja a la teva hora."
   ]
 }
