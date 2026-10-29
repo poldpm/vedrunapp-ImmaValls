@@ -53,6 +53,18 @@
 window.AVIS_INICI = 'adeu-assistent';
 
 /* ============================================================
+   EL TEMPORITZADOR
+   ------------------------------------------------------------
+   El va demanar ella (29/10/2026): no vol haver d'obrir el
+   ClassroomScreen quan ja té aquesta app oberta tot el dia.
+
+   És una eina opcional del base: el codi el tenen totes les apps
+   (`js/temporitzador.js`), però neix apagada i només la veu qui
+   tingui aquesta línia. Surt a Eines → Temporitzador.
+   ============================================================ */
+window.EINES_TEMPORITZADOR = true;
+
+/* ============================================================
    EL REGISTRE DE NOTES PER CATEGORIES
    ------------------------------------------------------------
    Ella no puntua amb una llista d'activitats soltes: fa servir el
