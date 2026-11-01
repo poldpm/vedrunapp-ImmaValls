@@ -53,6 +53,22 @@
 window.AVIS_INICI = 'adeu-assistent';
 
 /* ============================================================
+   RÚBRIQUES D'AVALUACIÓ — encesa l'1/11/2026, demanada per ella
+   ------------------------------------------------------------
+   El codi de l'eina arriba a totes les apps amb el sync i neix APAGADA:
+   aquesta línia és tot el que l'encén. Li surt a Eines → Rúbriques
+   d'avaluació, i també fa que «Possibles actualitzacions» li digui «Ja la
+   tens ✓» en lloc de tornar-li a oferir.
+
+   ⚠ No s'hi puja cap versió: el `personal.js` no se sincronitza, i pujar-la
+   aquí la revertiria el proper sync.
+
+   Conviu amb el registre per categories d'aquí sota: en passar una rúbrica
+   al registre, el quadre li demana a quina categoria va la columna nova.
+   ============================================================ */
+window.EINES_RUBAVAL = true;
+
+/* ============================================================
    EL TEMPORITZADOR
    ------------------------------------------------------------
    El va demanar ella (29/10/2026): no vol haver d'obrir el
@@ -587,7 +603,18 @@ window.EINES_TEMPORITZADOR = true;
       e = _perfilEntradesAmbGrup().filter(function (x) { return x.key === sel.value; })[0];
     }
     if (!e) return null;
-    return _clau(e.key, trim, e.grup || null);
+    /* ⚠ LA CLAU QUE FARÀ SERVIR EL REGISTRE, NO LA DE L'ENTRADA (1/11/2026).
+
+       Les categories es desen amb la clau de `notesContext`, i el registre
+       l'obre l'eina de rúbriques amb la clau de l'ASSIGNATURA («catala»),
+       no amb la de l'entrada del perfil («catala__5eb»). Si aquí es
+       calculés amb la de l'entrada, el desplegable de categoria no sortiria
+       mai al quadre de passar al registre: buscaria unes categories desades
+       amb una altra clau. Es calcula exactament com ho farà `openNotes`,
+       desdoblament inclòs (que hi deixa el grup a null). */
+    var mat = (typeof _navMateriaKey === 'function') ? _navMateriaKey(e) : e.key;
+    var dd = (typeof _assigDesdobMap !== 'undefined') ? _assigDesdobMap[mat] : null;
+    return _clau(mat, trim, dd ? null : (e.grup || null));
   }
 
   function _posaTriaCatRubrica() {
