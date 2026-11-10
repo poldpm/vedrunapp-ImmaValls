@@ -1,13 +1,13 @@
 {
   "mestra": "Imma Valls",
-  "mareVersio": "v348",
+  "mareVersio": "v349",
   "propis": [
     "manual.html",
     "manifest.webmanifest",
     "manifest.json"
   ],
   "rol": "direccio",
-  "sincronitzat": "2026-11-09",
+  "sincronitzat": "2026-11-10",
   "fitxersMare": [
     ".gitignore",
     "CLAUDE.md",
